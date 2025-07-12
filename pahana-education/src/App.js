@@ -39,6 +39,7 @@ const App = () => {
   const [cart, setCart] = useState(dummyCart);
   const [order, setOrder] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
+  const [userId, setUserId] = useState(null);
 
   const fetchProducts = async () => {
     try {
@@ -70,8 +71,55 @@ const App = () => {
   };
 
   const fetchCart = async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    setCart(dummyCart);
+    try {
+      // Get user ID from localStorage or user session
+      const currentUserId = localStorage.getItem('userId') || userId;
+      console.log(currentUserId);
+      if (currentUserId) {
+        const cartData = await apiService.getCart(currentUserId);
+        
+        // Extract cart items from the nested structure
+        const cartItems = cartData.cartItems || [];
+        
+        // Transform the backend cart items to match the frontend cart structure
+        const transformedCart = {
+          id: `cart_${cartData.cartId || currentUserId}`,
+          total_items: cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          total_unique_items: cartItems.length,
+          line_items: cartItems.map(item => ({
+            id: item.cartItemId || `line_${Date.now()}_${item.itemId}`,
+            product_id: item.itemId,
+            name: item.itemName || item.name,
+            quantity: item.quantity || 0,
+            line_total: { 
+              formatted: `$${((item.pricePerUnit || 0) * (item.quantity || 0)).toFixed(2)}`, 
+              raw: (item.pricePerUnit || 0) * (item.quantity || 0) 
+            },
+            image: item.itemUrl || item.image,
+            price: { 
+              formatted: `$${(item.pricePerUnit || 0).toFixed(2)}`, 
+              raw: item.pricePerUnit || 0 
+            },
+            description: item.description || ''
+          })),
+          subtotal: {
+            formatted: `$${cartItems.reduce((sum, item) => sum + ((item.pricePerUnit || 0) * (item.quantity || 0)), 0).toFixed(2)}`,
+            raw: cartItems.reduce((sum, item) => sum + ((item.pricePerUnit || 0) * (item.quantity || 0)), 0)
+          },
+          currency: { code: "USD", symbol: "$" }
+        };
+        
+        setCart(transformedCart);
+        console.log('Fetched cart:', transformedCart);
+      } else {
+        // Fallback to dummy cart if no user ID
+        setCart(dummyCart);
+      }
+    } catch (error) {
+      console.error('Failed to fetch cart items:', error);
+      // Fallback to dummy cart on error
+      setCart(dummyCart);
+    }
   };
 
   const handleAddToCart = async (productId, quantity) => {
@@ -80,43 +128,140 @@ const App = () => {
 
     if (product.inventory < quantity) return; // Prevent adding more than available
 
-    const existingItem = cart.line_items.find(item => item.product_id === productId);
-    let newLineItems = [...cart.line_items];
-    if (existingItem) {
-      newLineItems = newLineItems.map(item =>
-        item.product_id === productId
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
+    try {
+      const currentUserId = localStorage.getItem('userId') || userId;
+      
+      if (currentUserId) {
+        // Get cart ID from current cart or fetch it
+        let cartId = cart.id ? cart.id.replace('cart_', '') : null;
+        
+        if (!cartId) {
+          // If no cart ID, fetch the cart first to get the cart ID
+          const cartData = await apiService.getCart(currentUserId);
+          cartId = cartData.cartId;
+        }
+        
+        if (cartId) {
+          // Add item to backend cart
+          const itemData = {
+            itemId: parseInt(productId.replace('prod_', '')) || 1, // Extract number from "prod_1" -> 1
+            itemName: product.name,
+            quantity: quantity,
+            pricePerUnit: product.price.raw,
+            itemUrl: product.image.url, // Extract the URL string from the image object
+            description: (product.description || '').substring(0, 255) // Truncate description to 255 characters
+          };
+
+          const response = await apiService.addCartItem(cartId, itemData);
+          
+          // Refresh cart from backend
+          await fetchCart();
+          
+          // Show success message
+          console.log('Item added to cart successfully:', response);
+        } else {
+          // Fallback to local cart if no cart ID
+          const existingItem = cart.line_items.find(item => item.product_id === productId);
+          let newLineItems = [...cart.line_items];
+          if (existingItem) {
+            newLineItems = newLineItems.map(item =>
+              item.product_id === productId
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+            );
+          } else {
+            newLineItems.push({
+              id: `line_${Date.now()}`,
+              product_id: productId,
+              name: product.name,
+              quantity: quantity,
+              line_total: { formatted: `$${(product.price.raw * quantity).toFixed(2)}`, raw: product.price.raw * quantity },
+              image: product.image,
+              price: product.price
+            });
+          }
+          const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+          const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+          setCart({
+            ...cart,
+            line_items: newLineItems,
+            total_items: totalItems,
+            total_unique_items: newLineItems.length,
+            subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
+          });
+        }
+      } else {
+        // Fallback to local cart if no account number
+        const existingItem = cart.line_items.find(item => item.product_id === productId);
+        let newLineItems = [...cart.line_items];
+        if (existingItem) {
+          newLineItems = newLineItems.map(item =>
+            item.product_id === productId
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
+        } else {
+          newLineItems.push({
+            id: `line_${Date.now()}`,
+            product_id: productId,
+            name: product.name,
+            quantity: quantity,
+            line_total: { formatted: `$${(product.price.raw * quantity).toFixed(2)}`, raw: product.price.raw * quantity },
+            image: product.image,
+            price: product.price
+          });
+        }
+        const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+        setCart({
+          ...cart,
+          line_items: newLineItems,
+          total_items: totalItems,
+          total_unique_items: newLineItems.length,
+          subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
+        });
+      }
+
+      // Reduce inventory in products state
+      setProducts(prevProducts =>
+        prevProducts.map(p =>
+          p.id === productId
+            ? { ...p, inventory: p.inventory - quantity }
+            : p
+        )
       );
-    } else {
-      newLineItems.push({
-        id: `line_${Date.now()}`,
-        product_id: productId,
-        name: product.name,
-        quantity: quantity,
-        line_total: { formatted: `$${(product.price.raw * quantity).toFixed(2)}`, raw: product.price.raw * quantity },
-        image: product.image,
-        price: product.price
+    } catch (error) {
+      console.error('Failed to add item to cart:', error);
+      // Fallback to local cart on error
+      const existingItem = cart.line_items.find(item => item.product_id === productId);
+      let newLineItems = [...cart.line_items];
+      if (existingItem) {
+        newLineItems = newLineItems.map(item =>
+          item.product_id === productId
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        newLineItems.push({
+          id: `line_${Date.now()}`,
+          product_id: productId,
+          name: product.name,
+          quantity: quantity,
+          line_total: { formatted: `$${(product.price.raw * quantity).toFixed(2)}`, raw: product.price.raw * quantity },
+          image: product.image,
+          price: product.price
+        });
+      }
+      const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+      const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+      setCart({
+        ...cart,
+        line_items: newLineItems,
+        total_items: totalItems,
+        total_unique_items: newLineItems.length,
+        subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
       });
     }
-    const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
-    setCart({
-      ...cart,
-      line_items: newLineItems,
-      total_items: totalItems,
-      total_unique_items: newLineItems.length,
-      subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
-    });
-
-    // Reduce inventory in products state
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId
-          ? { ...p, inventory: p.inventory - quantity }
-          : p
-      )
-    );
   };
 
   const handleUpdateCartQty = async (lineItemId, quantity) => {
@@ -124,53 +269,133 @@ const App = () => {
       handleRemoveFromCart(lineItemId);
       return;
     }
-
-    const newLineItems = cart.line_items.map(item => 
-      item.id === lineItemId 
-        ? { 
-            ...item, 
-            quantity: quantity,
-            line_total: { 
-              formatted: `$${(item.price.raw * quantity).toFixed(2)}`, 
-              raw: item.price.raw * quantity 
-            }
-          }
-        : item
-    );
-
-    const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
-
-    setCart({
-      ...cart,
-      line_items: newLineItems,
-      total_items: totalItems,
-      total_unique_items: newLineItems.length,
-      subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
-    });
+    try {
+      let cartId = cart.id ? cart.id.replace('cart_', '') : null;
+      if (!cartId) return;
+      await apiService.updateCartItemQuantityViaCartEndpoint(cartId, lineItemId, quantity);
+      await fetchCart();
+    } catch (error) {
+      console.error('Failed to update cart item:', error);
+    }
   };
 
   const handleRemoveFromCart = async (lineItemId) => {
-    const newLineItems = cart.line_items.filter(item => item.id !== lineItemId);
-    
-    const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+    try {
+      const currentUserId = localStorage.getItem('userId') || userId;
+      
+      if (currentUserId) {
+        // Get cart ID from current cart
+        let cartId = cart.id ? cart.id.replace('cart_', '') : null;
+        
+        if (!cartId) {
+          // If no cart ID, fetch the cart first to get the cart ID
+          const cartData = await apiService.getCart(currentUserId);
+          cartId = cartData.cartId;
+        }
+        
+        if (cartId) {
+          // Remove item from backend cart
+          await apiService.removeCartItem(lineItemId);
+          
+          // Refresh cart from backend
+          await fetchCart();
+        } else {
+          // Fallback to local cart if no cart ID
+          const newLineItems = cart.line_items.filter(item => item.id !== lineItemId);
+          
+          const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+          const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
 
-    setCart({
-      ...cart,
-      line_items: newLineItems,
-      total_items: totalItems,
-      total_unique_items: newLineItems.length,
-      subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
-    });
+          setCart({
+            ...cart,
+            line_items: newLineItems,
+            total_items: totalItems,
+            total_unique_items: newLineItems.length,
+            subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
+          });
+        }
+      } else {
+        // Fallback to local cart if no account number
+        const newLineItems = cart.line_items.filter(item => item.id !== lineItemId);
+        
+        const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+
+        setCart({
+          ...cart,
+          line_items: newLineItems,
+          total_items: totalItems,
+          total_unique_items: newLineItems.length,
+          subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to remove cart item:', error);
+      // Fallback to local cart on error
+      const newLineItems = cart.line_items.filter(item => item.id !== lineItemId);
+      
+      const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
+      const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+
+      setCart({
+        ...cart,
+        line_items: newLineItems,
+        total_items: totalItems,
+        total_unique_items: newLineItems.length,
+        subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
+      });
+    }
   };
 
   const handleEmptyCart = async () => {
-    setCart(dummyCart);
+    try {
+      const currentUserId = localStorage.getItem('userId') || userId;
+      
+      if (currentUserId) {
+        // Get cart ID from current cart
+        let cartId = cart.id ? cart.id.replace('cart_', '') : null;
+        
+        if (!cartId) {
+          // If no cart ID, fetch the cart first to get the cart ID
+          const cartData = await apiService.getCart(currentUserId);
+          cartId = cartData.cartId;
+        }
+        
+        if (cartId) {
+          // Clear cart in backend
+          await apiService.clearCart(cartId);
+          
+          // Refresh cart from backend
+          await fetchCart();
+        } else {
+          // Fallback to local cart if no cart ID
+          setCart(dummyCart);
+        }
+      } else {
+        // Fallback to local cart if no account number
+        setCart(dummyCart);
+      }
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+      // Fallback to local cart on error
+      setCart(dummyCart);
+    }
   };
 
   const refreshCart = async () => {
-    setCart(dummyCart);
+    await fetchCart();
+  };
+
+  const setUserAccount = (userAccountId) => {
+    setUserId(userAccountId);
+    localStorage.setItem('userId', userAccountId);
+  };
+
+  const handleCartClick = async () => {
+    // Load cart items when cart icon is clicked
+    await fetchCart();
+    // Navigate to cart page
+    window.location.href = '/cart';
   };
 
   const handleCaptureCheckout = async (checkoutTokenId, newOrder) => {
@@ -223,6 +448,13 @@ const App = () => {
         setBioProducts([]);
       }
     };
+
+    // Check for existing user ID in localStorage
+    const existingUserId = localStorage.getItem('userId');
+    if (existingUserId) {
+      setUserId(existingUserId);
+    }
+
     loadProducts();
     fetchCart();
   }, []);
@@ -239,6 +471,8 @@ const App = () => {
               <Navbar
                 totalItems={cart.total_items}
                 handleDrawerToggle={handleDrawerToggle}
+                setUserAccount={setUserAccount}
+                onCartClick={handleCartClick}
               />
               <Switch>
                 <Route exact path="/">
@@ -290,7 +524,7 @@ const App = () => {
                   />
                 </Route>
                 <Route path="/account" exact>
-                  <Account />
+                  <Account setUserAccount={setUserAccount} />
                 </Route>
               </Switch>
             </div>

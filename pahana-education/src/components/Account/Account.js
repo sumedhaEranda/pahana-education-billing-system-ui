@@ -42,7 +42,7 @@ const emptyAddress = {
   country: ''
 };
 
-const Account = () => {
+const Account = ({ setUserAccount }) => {
   const classes = useStyles();
   const history = useHistory();
   const [user, setUser] = useState(null);
@@ -73,36 +73,41 @@ const Account = () => {
       setLoading(false);
       return;
     }
-    setUserId(userId);
-    apiService.getCustomer(userId)
-      .then((customer) => {
-        setUser({
-          name: customer.name || '',
-          email: customer.username || '',
-          username: customer.username || '',
-          role: customer.role || 'USER',
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name || customer.username)}&background=667eea&color=fff`,
-          joinDate: localStorage.getItem('userJoinDate') || new Date().toLocaleDateString(),
-          authType: 'email',
-          provider: 'email'
-        });
-        setEditData({
-          name: customer.name || '',
-          email: customer.username || '',
-          username: customer.username || ''
-        });
-        setTelephone(customer.telephone || '');
-        setBillingAddress(customer.billingAddress || emptyAddress);
-        setDeliveryAddress(customer.deliveryAddress || emptyAddress);
-        setBillingEditData(customer.billingAddress || emptyAddress);
-        setDeliveryEditData(customer.deliveryAddress || emptyAddress);
-        // Save to localStorage for persistence
-        localStorage.setItem('userName', customer.name || '');
-        localStorage.setItem('userEmail', customer.username || '');
-        localStorage.setItem('userUsername', customer.username || '');
-        localStorage.setItem('billingAddress', JSON.stringify(customer.billingAddress || emptyAddress));
-        localStorage.setItem('deliveryAddress', JSON.stringify(customer.deliveryAddress || emptyAddress));
-      })
+            setUserId(userId);
+        apiService.getCustomer(userId)
+          .then((customer) => {
+            setUser({
+              name: customer.name || '',
+              email: customer.username || '',
+              username: customer.username || '',
+              role: customer.role || 'USER',
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name || customer.username)}&background=667eea&color=fff`,
+              joinDate: localStorage.getItem('userJoinDate') || new Date().toLocaleDateString(),
+              authType: 'email',
+              provider: 'email'
+            });
+            setEditData({
+              name: customer.name || '',
+              email: customer.username || '',
+              username: customer.username || ''
+            });
+            setTelephone(customer.telephone || '');
+            setBillingAddress(customer.billingAddress || emptyAddress);
+            setDeliveryAddress(customer.deliveryAddress || emptyAddress);
+            setBillingEditData(customer.billingAddress || emptyAddress);
+            setDeliveryEditData(customer.deliveryAddress || emptyAddress);
+            // Save to localStorage for persistence
+            localStorage.setItem('userName', customer.name || '');
+            localStorage.setItem('userEmail', customer.username || '');
+            localStorage.setItem('userUsername', customer.username || '');
+            localStorage.setItem('billingAddress', JSON.stringify(customer.billingAddress || emptyAddress));
+            localStorage.setItem('deliveryAddress', JSON.stringify(customer.deliveryAddress || emptyAddress));
+            
+            // Set account number for cart functionality
+            if (setUserAccount) {
+              setUserAccount(userId);
+            }
+          })
       .catch((err) => {
         setError('Failed to load account information');
       })

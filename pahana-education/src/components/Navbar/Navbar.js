@@ -17,7 +17,7 @@ import useStyles from "./styles";
 import Login from "../Login/Login";
 import Register from "../Register/Register";
 
-const Navbar = ({ totalItems }) => {
+const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
   const classes = useStyles();
   const location = useLocation();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -90,6 +90,12 @@ const Navbar = ({ totalItems }) => {
       localStorage.setItem('userUsername', userInfo.username);
       localStorage.setItem('userAvatar', userInfo.avatar);
       localStorage.setItem('userJoinDate', new Date().toLocaleDateString());
+      
+      // Set account number for cart functionality
+      const userId = localStorage.getItem('userId');
+      if (userId && setUserAccount) {
+        setUserAccount(userId);
+      }
     } else if (userData.firstName && userData.lastName) {
       // Registration
       const userInfo = {
@@ -109,6 +115,12 @@ const Navbar = ({ totalItems }) => {
       localStorage.setItem('userAvatar', userInfo.avatar);
       localStorage.setItem('userRole', 'USER');
       localStorage.setItem('userJoinDate', new Date().toLocaleDateString());
+      
+      // Set account number for cart functionality
+      const userId = localStorage.getItem('userId');
+      if (userId && setUserAccount) {
+        setUserAccount(userId);
+      }
     }
   };
 
@@ -177,8 +189,7 @@ const Navbar = ({ totalItems }) => {
           {/* Cart Icon */}
           <div className={classes.button}>
             <IconButton
-              component={Link}
-              to="/cart"
+              onClick={onCartClick}
               aria-label="Show cart items"
               color="inherit"
             >

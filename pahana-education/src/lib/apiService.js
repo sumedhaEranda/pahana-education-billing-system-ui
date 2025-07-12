@@ -196,6 +196,142 @@ class ApiService {
     }
     return response.json();
   }
+
+  // Get cart by user ID
+  async getCart(userId) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/${userId}`, {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch cart');
+    }
+    
+    return response.json();
+  }
+
+  // Add item to cart
+  async addCartItem(cartId, itemData) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/${cartId}/items`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(itemData)
+    });
+    console.log('addCartItem response:', response);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to add item to cart');
+    }
+    
+    return response.json();
+  }
+
+  // Update cart item quantity
+  async updateCartItemQuantity(cartItemId, action, value) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/items/${cartItemId}/quantity?action=${action}&value=${value}`, {
+      method: 'PUT',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update cart item quantity');
+    }
+    
+    return response.json();
+  }
+
+  // Set cart item quantity directly (alternative method using 'update' action)
+  async setCartItemQuantity(cartItemId, quantity) {
+    return this.updateCartItemQuantity(cartItemId, 'update', quantity);
+  }
+
+  // Remove item from cart
+  async removeCartItem(cartItemId) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/items/${cartItemId}`, {
+      method: 'DELETE',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to remove cart item');
+    }
+    
+    // Try to parse as JSON, but handle text responses gracefully
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return response.json();
+      } else {
+        // If it's not JSON, just return the text response
+        const textResponse = await response.text();
+        return { message: textResponse };
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, return the text response
+      const textResponse = await response.text();
+      return { message: textResponse };
+    }
+  }
+
+  // Clear all cart items
+  async clearCart(cartId) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/${cartId}/items`, {
+      method: 'DELETE',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to clear cart');
+    }
+    
+    return response.json();
+  }
+
+  // Update cart item quantity via /api/carts/{cartId}/items endpoint
+  async updateCartItemQuantityViaCartEndpoint(cartId, cartItemId, quantity) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${this.baseURL}/carts/${cartId}/items`, {
+      method: 'PUT',
+      headers: headers,
+      body: JSON.stringify({ cartItemId, quantity })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update cart item quantity');
+    }
+
+    return response.json();
+  }
 }
 
 const apiService = new ApiService();
