@@ -40,6 +40,7 @@ const App = () => {
   const [order, setOrder] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [userId, setUserId] = useState(null);
+  const [customer, setCustomer] = useState(null);
 
   const fetchProducts = async () => {
     try {
@@ -77,13 +78,13 @@ const App = () => {
       console.log(currentUserId);
       if (currentUserId) {
         const cartData = await apiService.getCart(currentUserId);
-        
+        console.log(currentUserId);
         // Extract cart items from the nested structure
         const cartItems = cartData.cartItems || [];
         
         // Transform the backend cart items to match the frontend cart structure
         const transformedCart = {
-          id: `cart_${cartData.cartId || currentUserId}`,
+          id: `${cartData.cartId || currentUserId}`,
           total_items: cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
           total_unique_items: cartItems.length,
           line_items: cartItems.map(item => ({
@@ -122,6 +123,22 @@ const App = () => {
     }
   };
 
+  const fetchCustomer = async () => {
+    try {
+      const currentUserId = localStorage.getItem('userId') || userId;
+      if (currentUserId) {
+        const customerData = await apiService.getCustomer(currentUserId);
+        setCustomer(customerData);
+        console.log('Fetched customer:', customerData);
+      } else {
+        setCustomer(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch customer:', error);
+      setCustomer(null);
+    }
+  };
+
   const handleAddToCart = async (productId, quantity) => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
@@ -129,69 +146,33 @@ const App = () => {
     if (product.inventory < quantity) return; // Prevent adding more than available
 
     try {
-      const currentUserId = localStorage.getItem('userId') || userId;
+      let cartId = cart.id ? cart.id.replace('cart_', '') : null;
+      if (!cartId) {
+        // Optionally, fetch or create a cart here
+        // Or show an error message
+        return;
+      }
       
-      if (currentUserId) {
-        // Get cart ID from current cart or fetch it
-        let cartId = cart.id ? cart.id.replace('cart_', '') : null;
-        
-        if (!cartId) {
-          // If no cart ID, fetch the cart first to get the cart ID
-          const cartData = await apiService.getCart(currentUserId);
-          cartId = cartData.cartId;
-        }
-        
-        if (cartId) {
-          // Add item to backend cart
-          const itemData = {
-            itemId: parseInt(productId.replace('prod_', '')) || 1, // Extract number from "prod_1" -> 1
-            itemName: product.name,
-            quantity: quantity,
-            pricePerUnit: product.price.raw,
-            itemUrl: product.image.url, // Extract the URL string from the image object
-            description: (product.description || '').substring(0, 255) // Truncate description to 255 characters
-          };
+      if (cartId) {
+        // Add item to backend cart
+        const itemData = {
+          itemId: parseInt(productId.replace('prod_', '')) || 1, // Extract number from "prod_1" -> 1
+          itemName: product.name,
+          quantity: quantity,
+          pricePerUnit: product.price.raw,
+          itemUrl: product.image.url, // Extract the URL string from the image object
+          description: (product.description || '').substring(0, 255) // Truncate description to 255 characters
+        };
 
-          const response = await apiService.addCartItem(cartId, itemData);
-          
-          // Refresh cart from backend
-          await fetchCart();
-          
-          // Show success message
-          console.log('Item added to cart successfully:', response);
-        } else {
-          // Fallback to local cart if no cart ID
-          const existingItem = cart.line_items.find(item => item.product_id === productId);
-          let newLineItems = [...cart.line_items];
-          if (existingItem) {
-            newLineItems = newLineItems.map(item =>
-              item.product_id === productId
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-            );
-          } else {
-            newLineItems.push({
-              id: `line_${Date.now()}`,
-              product_id: productId,
-              name: product.name,
-              quantity: quantity,
-              line_total: { formatted: `$${(product.price.raw * quantity).toFixed(2)}`, raw: product.price.raw * quantity },
-              image: product.image,
-              price: product.price
-            });
-          }
-          const totalItems = newLineItems.reduce((sum, item) => sum + item.quantity, 0);
-          const subtotal = newLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
-          setCart({
-            ...cart,
-            line_items: newLineItems,
-            total_items: totalItems,
-            total_unique_items: newLineItems.length,
-            subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
-          });
-        }
+        const response = await apiService.addCartItem(cartId, itemData);
+        
+        // Refresh cart from backend
+        await fetchCart();
+        
+        // Show success message
+        console.log('Item added to cart successfully:', response);
       } else {
-        // Fallback to local cart if no account number
+        // Fallback to local cart if no cart ID
         const existingItem = cart.line_items.find(item => item.product_id === productId);
         let newLineItems = [...cart.line_items];
         if (existingItem) {
@@ -221,15 +202,6 @@ const App = () => {
           subtotal: { formatted: `$${subtotal.toFixed(2)}`, raw: subtotal }
         });
       }
-
-      // Reduce inventory in products state
-      setProducts(prevProducts =>
-        prevProducts.map(p =>
-          p.id === productId
-            ? { ...p, inventory: p.inventory - quantity }
-            : p
-        )
-      );
     } catch (error) {
       console.error('Failed to add item to cart:', error);
       // Fallback to local cart on error
@@ -270,9 +242,23 @@ const App = () => {
       return;
     }
     try {
-      let cartId = cart.id ? cart.id.replace('cart_', '') : null;
-      if (!cartId) return;
-      await apiService.updateCartItemQuantityViaCartEndpoint(cartId, lineItemId, quantity);
+      const currentItem = cart.line_items.find(item => item.id === lineItemId);
+      if (!currentItem) return;
+      const currentQuantity = currentItem.quantity;
+      const newQuantity = quantity;
+      const difference = newQuantity - currentQuantity;
+      let action, value;
+      if (difference > 0) {
+        action = 'increase';
+        value = difference;
+      } else if (difference < 0) {
+        action = 'decrease';
+        value = Math.abs(difference);
+      } else {
+        // No change needed
+        return;
+      }
+      await apiService.updateCartItemQuantityByCart(lineItemId, action, value);
       await fetchCart();
     } catch (error) {
       console.error('Failed to update cart item:', error);
@@ -389,6 +375,7 @@ const App = () => {
   const setUserAccount = (userAccountId) => {
     setUserId(userAccountId);
     localStorage.setItem('userId', userAccountId);
+    fetchCustomer();
   };
 
   const handleCartClick = async () => {
@@ -457,7 +444,15 @@ const App = () => {
 
     loadProducts();
     fetchCart();
+    fetchCustomer();
   }, []);
+
+  // Refetch customer data when userId changes
+  useEffect(() => {
+    if (userId) {
+      fetchCustomer();
+    }
+  }, [userId]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
@@ -497,6 +492,7 @@ const App = () => {
                     order={order}
                     onCaptureCheckout={handleCaptureCheckout}
                     error={errorMessage}
+                    customer={customer}
                   />
                 </Route>
                 <Route path="/product-view/:id" exact>

@@ -16,6 +16,28 @@ function FormInput({ name, label, required }) {
         fullWidth
         required={required}
         error={isError}
+        variant="outlined"
+        style={{
+          marginBottom: '16px'
+        }}
+        InputProps={{
+          style: {
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 1)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+            }
+          }
+        }}
+        InputLabelProps={{
+          style: {
+            fontWeight: '600',
+            color: '#1a202c'
+          }
+        }}
       />
     </Grid>
   );

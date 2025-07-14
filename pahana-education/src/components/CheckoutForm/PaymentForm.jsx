@@ -1,5 +1,22 @@
 import React, { useState } from "react";
-import { Typography, Button, Grid, TextField } from "@material-ui/core";
+import { 
+  Typography, 
+  Button, 
+  Grid, 
+  TextField, 
+  Paper, 
+  Box, 
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from "@material-ui/core";
+import { 
+  CreditCard as CreditCardIcon,
+  Payment as PaymentIcon,
+  Security as SecurityIcon
+} from "@material-ui/icons";
 import { useForm, FormProvider } from "react-hook-form";
 
 import Review from "./Review";
@@ -21,9 +38,9 @@ const PaymentForm = ({
 
   // Dummy payment methods
   const paymentMethods = [
-    { id: 'card', name: 'Credit/Debit Card', icon: '💳' },
-    { id: 'paypal', name: 'PayPal', icon: '🔵' },
-    { id: 'applepay', name: 'Apple Pay', icon: '🍎' }
+    { id: 'card', name: 'Credit/Debit Card', icon: <CreditCardIcon />, color: '#667eea' },
+    { id: 'paypal', name: 'PayPal', icon: '🔵', color: '#0070ba' },
+    { id: 'applepay', name: 'Apple Pay', icon: '🍎', color: '#000000' }
   ];
 
   // Calculate total with shipping
@@ -122,50 +139,93 @@ const PaymentForm = ({
   };
 
   return (
-    <>
+    <Paper elevation={3} style={{ padding: '24px', borderRadius: '16px', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
       <Review cart={cart} shippingData={shippingData} />
-      <div style={{ 
-        height: "1px", 
-        backgroundColor: "#e0e0e0", 
-        margin: "24px 0",
-        width: "100%" 
-      }} />
-      <Typography variant="h6" gutterBottom style={{ margin: "20px 0" }}>
-        Payment method
+      
+      <Box 
+        style={{ 
+          height: "2px", 
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+          margin: "32px 0",
+          borderRadius: "1px"
+        }} 
+      />
+      
+      <Typography variant="h5" gutterBottom style={{ 
+        fontWeight: '700',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        marginBottom: '24px'
+      }}>
+        Payment Method
       </Typography>
       
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit}>
           {/* Payment Method Selection */}
-          <div style={{ marginBottom: "20px" }}>
-            <Typography variant="subtitle1" gutterBottom>Select Payment Method</Typography>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <Box mb={3}>
+            <Typography variant="subtitle1" gutterBottom style={{ fontWeight: '600', marginBottom: '16px' }}>
+              Select Payment Method
+            </Typography>
+            <Grid container spacing={2}>
               {paymentMethods.map((method) => (
-                <Button
-                  key={method.id}
-                  variant={paymentMethod === method.id ? "contained" : "outlined"}
-                  onClick={() => setPaymentMethod(method.id)}
-                  style={{ 
-                    minWidth: "120px",
-                    backgroundColor: paymentMethod === method.id ? "#001524" : "transparent",
-                    color: paymentMethod === method.id ? "white" : "inherit"
-                  }}
-                >
-                  <span style={{ marginRight: "5px" }}>{method.icon}</span>
-                  {method.name}
-                </Button>
+                <Grid item xs={12} sm={4} key={method.id}>
+                  <Paper
+                    elevation={paymentMethod === method.id ? 4 : 1}
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      border: paymentMethod === method.id ? `2px solid ${method.color}` : '2px solid transparent',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s ease',
+                      backgroundColor: paymentMethod === method.id ? `${method.color}10` : 'white',
+                      transform: paymentMethod === method.id ? 'translateY(-2px)' : 'none'
+                    }}
+                    onClick={() => setPaymentMethod(method.id)}
+                  >
+                    <Box display="flex" alignItems="center" justifyContent="center" flexDirection="column">
+                      <Box 
+                        style={{ 
+                          color: method.color,
+                          marginBottom: '8px'
+                        }}
+                      >
+                        {method.icon}
+                      </Box>
+                      <Typography variant="body2" style={{ fontWeight: '600', textAlign: 'center' }}>
+                        {method.name}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
               ))}
-            </div>
-          </div>
+            </Grid>
+          </Box>
 
           {/* Card Details Form */}
           {paymentMethod === 'card' && (
-            <div style={{ marginBottom: "20px" }}>
-              <Typography variant="subtitle1" gutterBottom>Card Details</Typography>
-              <Typography variant="body2" color="textSecondary" style={{ marginBottom: "15px" }}>
-                For testing, you can use any valid-looking card details. Examples: 4111111111111111 (Visa), 5555555555554444 (Mastercard), 378282246310005 (Amex)
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom style={{ fontWeight: '600', marginBottom: '16px' }}>
+                Card Details
               </Typography>
-              <Grid container spacing={2}>
+              
+              <Box
+                style={{ 
+                  marginBottom: '20px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  padding: '16px'
+                }}
+              >
+                <Typography variant="body2" style={{ color: '#667eea' }}>
+                  For testing, you can use any valid-looking card details. Examples: 4111111111111111 (Visa), 5555555555554444 (Mastercard), 378282246310005 (Amex)
+                </Typography>
+              </Box>
+              
+              <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <TextField
                     required
@@ -174,6 +234,13 @@ const PaymentForm = ({
                     value={cardholderName}
                     onChange={(e) => setCardholderName(e.target.value)}
                     variant="outlined"
+                    style={{ borderRadius: '12px' }}
+                    InputProps={{
+                      style: {
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                      }
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -185,6 +252,13 @@ const PaymentForm = ({
                     onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
                     placeholder="1234 5678 9012 3456"
                     variant="outlined"
+                    style={{ borderRadius: '12px' }}
+                    InputProps={{
+                      style: {
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                      }
+                    }}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -199,7 +273,13 @@ const PaymentForm = ({
                     }}
                     placeholder="MMYY (e.g., 1225)"
                     variant="outlined"
-                    helperText="Enter as MMYY (e.g., 1225 for December 2025)"
+                    style={{ borderRadius: '12px' }}
+                    InputProps={{
+                      style: {
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                      }
+                    }}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -208,54 +288,130 @@ const PaymentForm = ({
                     fullWidth
                     label="CVV"
                     value={cvv}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      setCvv(value);
-                    }}
-                    placeholder="123 or 1234"
+                    onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="123"
                     variant="outlined"
-                    helperText="3 digits for most cards, 4 digits for Amex"
+                    style={{ borderRadius: '12px' }}
+                    InputProps={{
+                      style: {
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                      }
+                    }}
                   />
                 </Grid>
               </Grid>
-            </div>
+            </Box>
           )}
 
-        {/* Other Payment Methods */}
-        {paymentMethod === 'paypal' && (
-          <div style={{ marginBottom: "20px", padding: "20px", border: "1px solid #ddd", borderRadius: "8px" }}>
-            <Typography variant="subtitle1" gutterBottom>PayPal</Typography>
-            <Typography variant="body2" color="textSecondary">
-              You will be redirected to PayPal to complete your payment securely.
-            </Typography>
-          </div>
-        )}
+          {/* Other Payment Methods */}
+          {paymentMethod !== 'card' && (
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom style={{ fontWeight: '600', marginBottom: '16px' }}>
+                {paymentMethods.find(m => m.id === paymentMethod)?.name} Details
+              </Typography>
+              <Box
+                style={{ 
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  padding: '16px'
+                }}
+              >
+                <Typography variant="body2" style={{ color: '#667eea' }}>
+                  You will be redirected to complete your payment securely.
+                </Typography>
+              </Box>
+            </Box>
+          )}
 
-        {paymentMethod === 'applepay' && (
-          <div style={{ marginBottom: "20px", padding: "20px", border: "1px solid #ddd", borderRadius: "8px" }}>
-            <Typography variant="subtitle1" gutterBottom>Apple Pay</Typography>
-            <Typography variant="body2" color="textSecondary">
-              Complete your purchase using Apple Pay on your device.
-            </Typography>
-          </div>
-        )}
-
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <Button variant="outlined" onClick={backStep}>
-            Back
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isProcessing}
-            style={{ backgroundColor: "#001524", color: "#FFFF" }}
+          {/* Order Summary */}
+          <Box 
+            style={{ 
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}
           >
-            {isProcessing ? "Processing..." : `Pay $${getTotal().toFixed(2)}`}
-          </Button>
-        </div>
+            <Typography variant="h6" gutterBottom style={{ fontWeight: '700', color: '#2d3748' }}>
+              Order Summary
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="body2" style={{ color: '#4a5568' }}>
+                  Subtotal:
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" style={{ fontWeight: '600', color: '#2d3748' }}>
+                  {cart.subtotal.formatted}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" style={{ color: '#4a5568' }}>
+                  Shipping:
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" style={{ fontWeight: '600', color: '#2d3748' }}>
+                  ${shippingData?.shippingOption === 'express' ? '12.99' : shippingData?.shippingOption === 'overnight' ? '24.99' : '5.99'}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body1" style={{ fontWeight: '700', color: '#2d3748' }}>
+                  Total:
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body1" style={{ fontWeight: '700', color: '#667eea' }}>
+                  ${getTotal().toFixed(2)}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* Action Buttons */}
+          <Box display="flex" justifyContent="space-between">
+            <Button 
+              onClick={backStep}
+              variant="outlined"
+              style={{
+                borderRadius: '12px',
+                padding: '12px 24px',
+                fontWeight: '600',
+                borderColor: '#667eea',
+                color: '#667eea'
+              }}
+            >
+              Back
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isProcessing}
+              style={{
+                borderRadius: '12px',
+                padding: '12px 32px',
+                fontWeight: '600',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
+              }}
+            >
+              {isProcessing ? (
+                <Box display="flex" alignItems="center">
+                  <CircularProgress size={20} style={{ color: 'white', marginRight: '8px' }} />
+                  Processing...
+                </Box>
+              ) : (
+                `Pay $${getTotal().toFixed(2)}`
+              )}
+            </Button>
+          </Box>
         </form>
       </FormProvider>
-    </>
+    </Paper>
   );
 };
 

@@ -221,7 +221,7 @@ class ApiService {
     const headers = {
       'Content-Type': 'application/json'
     };
-
+    console.log('addCartItem itemData:', itemData);
     const response = await fetch(`${this.baseURL}/carts/${cartId}/items`, {
       method: 'POST',
       headers: headers,
@@ -313,17 +313,41 @@ class ApiService {
     return response.json();
   }
 
-  // Update cart item quantity via /api/carts/{cartId}/items endpoint
-  async updateCartItemQuantityViaCartEndpoint(cartId, cartItemId, quantity) {
+  // Update cart item quantity via /items/{cartItemId}/quantity endpoint
+  async updateCartItemQuantityViaCartEndpoint(cartItemId, action, value) {
     const headers = {
       'Content-Type': 'application/json'
     };
 
-    const response = await fetch(`${this.baseURL}/carts/${cartId}/items`, {
-      method: 'PUT',
-      headers: headers,
-      body: JSON.stringify({ cartItemId, quantity })
-    });
+    const response = await fetch(
+      `${this.baseURL}/items/${cartItemId}/quantity?action=${action}&value=${value}`,
+      {
+        method: 'PUT',
+        headers: headers
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update cart item quantity');
+    }
+
+    return response.json();
+  }
+
+  // Update cart item quantity using /carts/items/{cartItemId}/quantity endpoint
+  async updateCartItemQuantityByCart(cartItemId, action, value) {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(
+      `${this.baseURL}/carts/items/${cartItemId}/quantity?action=${action}&value=${value}`,
+      {
+        method: 'PUT',
+        headers: headers
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

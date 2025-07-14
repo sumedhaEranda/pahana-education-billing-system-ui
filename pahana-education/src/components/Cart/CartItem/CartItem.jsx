@@ -12,7 +12,7 @@ const CartItem = ({ item, onUpdateCartQty, onRemoveFromCart, checked, onCheck })
       setShowError(true);
       return;
     }
-    onUpdateCartQty(lineItemId, newQuantity);
+    onUpdateCartQty(lineItemId, newQuantity, item.name);
   };
 
   const handleRemoveFromCart = (lineItemId) => onRemoveFromCart(lineItemId);
@@ -36,11 +36,12 @@ const CartItem = ({ item, onUpdateCartQty, onRemoveFromCart, checked, onCheck })
       <Box style={{ flex: 1, textAlign: 'center' }}>
         <Typography variant="h6">{item.name}</Typography>
         <Box display="flex" alignItems="center" justifyContent="center" mt={1}>
-          <Button type="button" size="small">-</Button>
+          <Button type="button" size="small" onClick={() => handleUpdateCartQty(item.id, item.quantity - 1)}>-</Button>
           <Typography>&nbsp;{item.quantity}&nbsp;</Typography>
           <Button
             type="button"
             size="small"
+            onClick={() => handleUpdateCartQty(item.id, item.quantity + 1)}
             disabled={item.inventory && item.quantity >= item.inventory.available}
           >+
           </Button>
