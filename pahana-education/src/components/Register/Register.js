@@ -14,6 +14,9 @@ import {
   Snackbar,
 } from "@material-ui/core";
 import { Close, Visibility, VisibilityOff } from "@material-ui/icons";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { auth } from "../FireBase/firebase";
+import { saveToken } from "../utils/tokenService";
 import apiService from "../../lib/apiService";
 import useStyles from "../Login/styles";
 
@@ -22,6 +25,7 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formErrors, setFormErrors] = useState({});
   const [formData, setFormData] = useState({
     email: "",
@@ -110,10 +114,11 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
 
     setLoading(true);
     setError("");
+    setSuccess("");
     setFormErrors({});
     
     try {
-      // Handle registration
+      // Register with your backend API
       console.log("Registration attempt:", formData);
       const response = await apiService.register({
         username: formData.username,
@@ -121,6 +126,18 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
         email: formData.email,
         role: "USER"
       });
+      
+      // Backend registration succeeded - call your function here
+      console.log("Backend registration successful:", response);
+      
+      // Store JWT token if provided by backend
+      if (response.token) {
+        saveToken(response.token);
+        console.log("JWT token saved after registration");
+      }
+      
+      // Call your custom function when registration succeeds
+      handleRegistrationSuccess(response);
       
       // Pass the registration data to the parent component
       const registrationData = {
@@ -142,6 +159,49 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
     }
   };
 
+  // Function to handle successful registration
+  const handleRegistrationSuccess = (response) => {
+    console.log("Registration success handler called with:", response);
+  
+    // Create Firebase user only after backend registration succeeds
+    createUserWithEmailAndPassword(auth, formData.email, formData.password)
+      .then((userCredential) => {
+        // Signed in 
+        const user = userCredential.user;
+        console.log("Firebase user created:", user);
+  
+        // Send verification email
+        sendEmailVerification(user)
+          .then(() => {
+            alert("Verification email sent!");
+            setSuccess("Account created successfully! Please check your email for verification.");
+          })
+          .catch((error) => {
+            console.error("Email verification error:", error);
+            setError("Account created but verification email failed to send.");
+          });
+  
+        // Optional: navigate user to home page
+        // navigate("/home");
+  
+      })
+      .catch((error) => {
+        console.error("Firebase auth error:", error);
+  
+        // Handle Firebase Auth errors properly
+        if (error.code === 'auth/email-already-in-use') {
+          setError("An account with this email already exists in Firebase.");
+        } else if (error.code === 'auth/weak-password') {
+          setError("Password is too weak for Firebase.");
+        } else if (error.code === 'auth/invalid-email') {
+          setError("Invalid email format for Firebase.");
+        } else {
+          setError("Firebase authentication failed: " + error.message);
+        }
+      });
+  };
+  
+
   const handleClose = () => {
     setFormData({
       email: "",
@@ -155,6 +215,7 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
       telephone: "",
     });
     setError("");
+    setSuccess("");
     setFormErrors({});
     setLoading(false);
     onClose();
@@ -162,6 +223,10 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
 
   const handleErrorClose = () => {
     setError("");
+  };
+
+  const handleSuccessClose = () => {
+    setSuccess("");
   };
 
   const handleSwitchToLogin = () => {
@@ -363,6 +428,27 @@ const Register = ({ open, onClose, onLogin, onSwitchToLogin }) => {
         >
           <Typography variant="body2">
             {error}
+          </Typography>
+        </Box>
+      </Snackbar>
+
+      <Snackbar
+        open={!!success}
+        autoHideDuration={6000}
+        onClose={handleSuccessClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Box
+          bgcolor="success.main"
+          color="success.contrastText"
+          px={2}
+          py={1}
+          borderRadius={1}
+          display="flex"
+          alignItems="center"
+        >
+          <Typography variant="body2">
+            {success}
           </Typography>
         </Box>
       </Snackbar>

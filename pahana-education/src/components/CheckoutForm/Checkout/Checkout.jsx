@@ -20,7 +20,6 @@ import {
 } from '@material-ui/icons';
 import { Link, useHistory } from 'react-router-dom';
 
-import { commerce } from '../../../lib/commerce';
 import AddressForm from '../AddressForm';
 import PaymentForm from '../PaymentForm';
 import useStyles from './styles';

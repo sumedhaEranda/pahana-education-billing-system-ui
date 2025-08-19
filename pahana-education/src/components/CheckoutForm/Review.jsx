@@ -2,6 +2,18 @@ import React from 'react';
 import { Typography, List, ListItem, ListItemText } from '@material-ui/core';
 
 const Review = ({ cart, shippingData }) => {
+  // Get selected items from localStorage
+  const selectedItemsJson = localStorage.getItem('selectedCartItems');
+  const selectedItemIds = selectedItemsJson ? JSON.parse(selectedItemsJson) : null;
+  
+  // Filter cart items to only show selected items
+  const selectedLineItems = selectedItemIds 
+    ? cart.line_items.filter(item => selectedItemIds.includes(item.id))
+    : cart.line_items;
+  
+  // Calculate subtotal for selected items only
+  const selectedSubtotal = selectedLineItems.reduce((sum, item) => sum + item.line_total.raw, 0);
+  
   // Calculate shipping cost based on selected option
   const getShippingCost = () => {
     if (!shippingData?.shippingOption) return 0;
@@ -16,14 +28,14 @@ const Review = ({ cart, shippingData }) => {
   };
 
   const shippingCost = getShippingCost();
-  const subtotal = cart.subtotal.raw;
+  const subtotal = selectedSubtotal; // Use selected items subtotal
   const total = subtotal + shippingCost;
 
   return (
     <>
       <Typography variant="h6" gutterBottom>Order summary</Typography>
       <List disablePadding>
-        {cart.line_items.map((product) => (
+        {selectedLineItems.map((product) => (
           <ListItem style={{ padding: '10px 0' }} key={product.name}>
             <ListItemText primary={product.name} secondary={`Quantity: ${product.quantity}`} />
             <Typography variant="body2">{product.line_total.formatted}</Typography>

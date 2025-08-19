@@ -13,14 +13,18 @@ import {
   Snackbar,
 } from "@material-ui/core";
 import { Close, Visibility, VisibilityOff } from "@material-ui/icons";
+import { signInWithEmailAndPassword} from "firebase/auth";
+import { auth } from "../FireBase/firebase";
+import { saveToken } from "../utils/tokenService";
 import apiService from "../../lib/apiService";
 import useStyles from "./styles";
 
-const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
+const Login = ({ open, onClose, onLogin, onSwitchToRegister, onSwitchToReset }) => {
   const classes = useStyles();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verifyEmail, setVerifyEmail] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [formData, setFormData] = useState({
     username: "",
@@ -28,146 +32,160 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
   });
 
   // Validation functions
-  const validateUsername = (username) => {
-    return username.length >= 3;
-  };
-
-  const validatePassword = (password) => {
-    return password.length >= 6;
-  };
+  const validateUsername = (username) => username.length >= 3;
+  const validatePassword = (password) => password.length >= 6;
 
   const validateForm = () => {
     const errors = {};
-
-    // Username validation
-    if (!formData.username) {
-      errors.username = "Username is required";
-    } else if (!validateUsername(formData.username)) {
+    if (!formData.username) errors.username = "Username is required";
+    else if (!validateUsername(formData.username))
       errors.username = "Username must be at least 3 characters long";
-    }
 
-    // Password validation
-    if (!formData.password) {
-      errors.password = "Password is required";
-    } else if (!validatePassword(formData.password)) {
+    if (!formData.password) errors.password = "Password is required";
+    else if (!validatePassword(formData.password))
       errors.password = "Password must be at least 6 characters long";
-    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleInputChange = (field) => (event) => {
-    const value = event.target.value;
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
-    
-    // Clear field-specific error when user starts typing
-    if (formErrors[field]) {
-      setFormErrors({
-        ...formErrors,
-        [field]: ""
-      });
-    }
+    setFormData({ ...formData, [field]: event.target.value });
+    if (formErrors[field]) setFormErrors({ ...formErrors, [field]: "" });
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Validate form before submission
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setError("");
     setFormErrors({});
-    
+    setVerifyEmail(false);
+
     try {
-      // Handle login
-      console.log("Login attempt:", { username: formData.username, password: formData.password });
-      const response = await apiService.login({
-        username: formData.username,
-        password: formData.password,
-        authType: 'email',
-        provider: 'email',
-        socialId: null
-      });
-      // Store userId for account API usage
-      if (response.user_id) {
-        localStorage.setItem('userId', response.user_id);
+      const email = formData.username.includes("@")
+        ? formData.username
+        : `${formData.username}@example.com`;
+
+      const response = await signInWithEmailAndPassword(auth, email, formData.password);
+      console.log("Full Response:", response);
+
+      
+      console.log("Is Email Verified:", response.user.emailVerified);
+      
+
+      if (response.user) {
+        if (response.user.emailVerified) {
+
+          try {
+            const updateResponse = await apiService.updatePassword(email, formData.password);
+            console.log("Password update response:", updateResponse);
+          } catch (err) {
+            console.error("Password update failed:", err.message);
+          
+            return;
+          }
+
+
+          const backendResponse = await apiService.login({
+            username: formData.username,
+            password: formData.password,
+            authType: "email",
+            provider: "email",
+            socialId: null,
+          });
+
+          if (backendResponse.token) saveToken(backendResponse.token);
+          if (backendResponse.user_id) localStorage.setItem("userId", backendResponse.user_id);
+
+          try {
+            const accountNo = backendResponse.user_id || backendResponse.user?.id;
+            if (accountNo) await apiService.createCart({ accountNo });
+          } catch (err) {
+            console.log("Cart creation failed:", err.message);
+          }
+
+          const loginData = {
+            username: formData.username,
+            password: formData.password,
+            email: backendResponse.user?.email || email,
+            firebaseUser: response.user,
+            ...backendResponse,
+          };
+
+          onLogin && onLogin(loginData);
+          onClose();
+        } else {
+          setVerifyEmail(true);
+          setError("Please verify your email before signing in.");
+        }
       }
-      // Do NOT store token in localStorage
-      // Pass the login data to the parent component
-      const loginData = {
-        username: formData.username,
-        password: formData.password,
-        email: response.user?.email || '',
-        ...response
-      };
-      onLogin && onLogin(loginData);
-      onClose();
-    } catch (error) {
-      console.error("Authentication error:", error);
-      setError(error.message || "Authentication failed. Please try again.");
+    } catch (err) {
+      console.error("Authentication error:", err);
+      switch (err.code) {
+        case "auth/user-not-found":
+          
+          break;
+        case "auth/wrong-password":
+          setError("Incorrect password. Please try again.");
+          break;
+        case "auth/invalid-email":
+          setError("Please enter a valid email address.");
+          break;
+        case "auth/too-many-requests":
+          setError("Too many failed attempts. Please try again later.");
+          break;
+        default:
+          setError(err.message || "Authentication failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({
-      username: "",
-      password: "",
-    });
+    setFormData({ username: "", password: "" });
     setError("");
     setFormErrors({});
     setLoading(false);
+    setVerifyEmail(false);
     onClose();
   };
 
-  const handleErrorClose = () => {
-    setError("");
-  };
+  const handleErrorClose = () => setError("");
 
   const handleSwitchToRegister = () => {
     handleClose();
     onSwitchToRegister && onSwitchToRegister();
   };
 
+  const handleSwitchToReset = () => {
+    handleClose();
+    onSwitchToReset && onSwitchToReset();
+  };
+
   return (
     <>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        className={`${classes.dialog} scale-in`}
-      >
-        <DialogTitle className={classes.dialogTitle}>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5" className={classes.title}>
-              Welcome Back
-            </Typography>
-            <IconButton onClick={handleClose} className={classes.closeButton}>
+            <Typography variant="h5">Welcome Back</Typography>
+            <IconButton onClick={handleClose}>
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent className={classes.dialogContent}>
+        <DialogContent>
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
               label="Username"
-              type="text"
               value={formData.username}
               onChange={handleInputChange("username")}
               variant="outlined"
               required
-              className={classes.textField}
               disabled={loading}
               error={!!formErrors.username}
               helperText={formErrors.username}
@@ -181,7 +199,6 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
               onChange={handleInputChange("password")}
               variant="outlined"
               required
-              className={classes.textField}
               style={{ marginTop: "16px" }}
               disabled={loading}
               error={!!formErrors.password}
@@ -199,24 +216,19 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
               }}
             />
 
-            <Typography
-              variant="body2"
-              className={classes.forgotPassword}
-              style={{ marginTop: "8px", textAlign: "right" }}
-            >
-              <Button color="primary" size="small" disabled={loading}>
+            <Box textAlign="right" mt={1}>
+              <Button color="primary" size="small" onClick={handleSwitchToReset} disabled={loading}>
                 Forgot Password?
               </Button>
-            </Typography>
+            </Box>
 
-            <DialogActions className={classes.dialogActions}>
+            <DialogActions>
               <Button
                 type="submit"
                 variant="contained"
                 color="primary"
                 fullWidth
                 size="large"
-                className={classes.submitButton}
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
               >
@@ -228,15 +240,18 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
           <Box textAlign="center" style={{ marginTop: "16px" }}>
             <Typography variant="body2" color="textSecondary">
               Don't have an account?{" "}
-              <Button
-                color="primary"
-                onClick={handleSwitchToRegister}
-                className={classes.toggleButton}
-                disabled={loading}
-              >
+              <Button color="primary" onClick={handleSwitchToRegister} disabled={loading}>
                 Sign Up
               </Button>
             </Typography>
+
+            {verifyEmail && (
+              <Box mt={2} p={2} bgcolor="warning.light" borderRadius={1}>
+                <Typography variant="body2" color="warning.contrastText">
+                  Email verification required. Please check your inbox.
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
       </Dialog>
@@ -245,7 +260,7 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
         open={!!error}
         autoHideDuration={6000}
         onClose={handleErrorClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Box
           bgcolor="error.main"
@@ -256,13 +271,11 @@ const Login = ({ open, onClose, onLogin, onSwitchToRegister }) => {
           display="flex"
           alignItems="center"
         >
-          <Typography variant="body2">
-            {error}
-          </Typography>
+          <Typography variant="body2">{error}</Typography>
         </Box>
       </Snackbar>
     </>
   );
 };
 
-export default Login; 
+export default Login;

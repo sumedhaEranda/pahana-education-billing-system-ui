@@ -131,14 +131,17 @@ const Cart = ({ cart, onUpdateCartQty, onRemoveFromCart, onEmptyCart }) => {
           />
           <Button 
             className={classes.checkoutButton} 
-            component={Link} 
-            to="/checkout" 
             size="large" 
             type="button" 
             variant="contained"
             fullWidth
             style={{ marginBottom: 12 }}
             disabled={selectedItems.length === 0}
+            onClick={() => {
+              // Store selected items in localStorage for checkout to access
+              localStorage.setItem('selectedCartItems', JSON.stringify(selectedItems));
+              window.location.href = '/checkout';
+            }}
           >
             PROCEED TO CHECKOUT
           </Button>

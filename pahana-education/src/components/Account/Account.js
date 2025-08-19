@@ -11,13 +11,10 @@ import {
   Divider,
   Button,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  CircularProgress,
-  Snackbar
+  Snackbar,
+  CardMedia,
+  Chip,
+  CircularProgress
 } from '@material-ui/core';
 import {
   Person,
@@ -27,13 +24,15 @@ import {
   Cancel,
   ShoppingCart,
   Book,
-  History
+  History,
+  LocalShipping,
+  Lock
 } from '@material-ui/icons';
 import { useHistory } from 'react-router-dom';
 import apiService from '../../lib/apiService';
 import useStyles from './styles';
+import PasswordForm from './PasswordForm';
 
-// Add these constants for address fields
 const emptyAddress = {
   street: '',
   city: '',
@@ -59,6 +58,11 @@ const Account = ({ setUserAccount }) => {
   const [deliveryEditData, setDeliveryEditData] = useState(emptyAddress);
   const [telephone, setTelephone] = useState('');
   const [userId, setUserId] = useState(null);
+  
+  // States for order history
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Fetch customer data from backend on mount
   useEffect(() => {
@@ -66,64 +70,70 @@ const Account = ({ setUserAccount }) => {
       history.push('/');
       return;
     }
-    // Get user_id from login response (store in localStorage on login)
+    
     const userId = localStorage.getItem('userId');
     if (!userId) {
       setError('No user ID found. Please log in again.');
       setLoading(false);
       return;
     }
-            setUserId(userId);
-        apiService.getCustomer(userId)
-          .then((customer) => {
-            setUser({
-              name: customer.name || '',
-              email: customer.username || '',
-              username: customer.username || '',
-              role: customer.role || 'USER',
-              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name || customer.username)}&background=667eea&color=fff`,
-              joinDate: localStorage.getItem('userJoinDate') || new Date().toLocaleDateString(),
-              authType: 'email',
-              provider: 'email'
-            });
-            setEditData({
-              name: customer.name || '',
-              email: customer.username || '',
-              username: customer.username || ''
-            });
-            setTelephone(customer.telephone || '');
-            setBillingAddress(customer.billingAddress || emptyAddress);
-            setDeliveryAddress(customer.deliveryAddress || emptyAddress);
-            setBillingEditData(customer.billingAddress || emptyAddress);
-            setDeliveryEditData(customer.deliveryAddress || emptyAddress);
-            // Save to localStorage for persistence
-            localStorage.setItem('userName', customer.name || '');
-            localStorage.setItem('userEmail', customer.username || '');
-            localStorage.setItem('userUsername', customer.username || '');
-            localStorage.setItem('billingAddress', JSON.stringify(customer.billingAddress || emptyAddress));
-            localStorage.setItem('deliveryAddress', JSON.stringify(customer.deliveryAddress || emptyAddress));
-            
-            // Set account number for cart functionality
-            if (setUserAccount) {
-              setUserAccount(userId);
-            }
-          })
+    
+    setUserId(userId);
+    apiService.getCustomer(userId)
+      .then((customer) => {
+        setUser({
+          name: customer.name || '',
+          email: customer.username || '',
+          username: customer.username || '',
+          role: customer.role || 'USER',
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name || customer.username)}&background=667eea&color=fff`,
+          joinDate: localStorage.getItem('userJoinDate') || new Date().toLocaleDateString(),
+          authType: 'email',
+          provider: 'email'
+        });
+        setEditData({
+          name: customer.name || '',
+          email: customer.username || '',
+          username: customer.username || ''
+        });
+        setTelephone(customer.telephone || '');
+        setBillingAddress(customer.billingAddress || emptyAddress);
+        setDeliveryAddress(customer.deliveryAddress || emptyAddress);
+        setBillingEditData(customer.billingAddress || emptyAddress);
+        setDeliveryEditData(customer.deliveryAddress || emptyAddress);
+        
+        localStorage.setItem('userName', customer.name || '');
+        localStorage.setItem('userEmail', customer.username || '');
+        localStorage.setItem('userUsername', customer.username || '');
+        localStorage.setItem('billingAddress', JSON.stringify(customer.billingAddress || emptyAddress));
+        localStorage.setItem('deliveryAddress', JSON.stringify(customer.deliveryAddress || emptyAddress));
+        
+        if (setUserAccount) {
+          setUserAccount(userId);
+        }
+      })
       .catch((err) => {
         setError('Failed to load account information');
       })
       .finally(() => setLoading(false));
   }, [history]);
 
+  // Fetch orders when user is loaded
   useEffect(() => {
-    // Load addresses from localStorage
-    const billing = JSON.parse(localStorage.getItem('billingAddress') || 'null') || emptyAddress;
-    const delivery = JSON.parse(localStorage.getItem('deliveryAddress') || 'null') || emptyAddress;
-    setBillingAddress(billing);
-    setDeliveryAddress(delivery);
-    setBillingEditData(billing);
-    setDeliveryEditData(delivery);
-  }, []);
+    if (userId) {
+      setOrdersLoading(true);
+      apiService.getCustomerOrders(userId)
+        .then(orders => {
+          setRecentOrders(orders.slice(0, 3)); // Show last 3 orders
+        })
+        .catch(err => {
+          console.error('Failed to load orders:', err);
+        })
+        .finally(() => setOrdersLoading(false));
+    }
+  }, [userId]);
 
+  // Event handlers for main account info
   const handleEdit = () => {
     setEditMode(true);
   };
@@ -137,7 +147,6 @@ const Account = ({ setUserAccount }) => {
     setEditMode(false);
   };
 
-  // Save account info (name, telephone)
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -176,10 +185,11 @@ const Account = ({ setUserAccount }) => {
     setBillingEditData(billingAddress);
     setBillingEditMode(false);
   };
+  
   const handleBillingChange = (field) => (e) => {
     setBillingEditData({ ...billingEditData, [field]: e.target.value });
   };
-  // Save billing address
+  
   const handleBillingSave = async () => {
     try {
       setLoading(true);
@@ -211,10 +221,11 @@ const Account = ({ setUserAccount }) => {
     setDeliveryEditData(deliveryAddress);
     setDeliveryEditMode(false);
   };
+  
   const handleDeliveryChange = (field) => (e) => {
     setDeliveryEditData({ ...deliveryEditData, [field]: e.target.value });
   };
-  // Save delivery address
+  
   const handleDeliverySave = async () => {
     try {
       setLoading(true);
@@ -241,12 +252,14 @@ const Account = ({ setUserAccount }) => {
   };
 
   const handleLogout = () => {
-    // Clear all localStorage data
     localStorage.clear();
     apiService.logout();
     history.push('/');
     window.location.reload();
   };
+
+  const openChangePassword = () => setChangePasswordOpen(true);
+  const closeChangePassword = () => setChangePasswordOpen(false);
 
   if (loading) {
     return (
@@ -589,13 +602,145 @@ const Account = ({ setUserAccount }) => {
                     startIcon={<History />}
                     onClick={() => history.push('/orders')}
                   >
-                    Order History
+                    View All Orders
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    startIcon={<Lock />}
+                    onClick={openChangePassword}
+                  >
+                    Change Password
                   </Button>
                 </Grid>
               </Grid>
             </Box>
           </Paper>
         </Grid>
+        
+        {/* Recent Orders Section */}
+        {/* Recent Orders Section */}
+<Grid item xs={12}>
+  <Paper className={classes.section}>
+    <Box p={3}>
+      <Typography variant="h6" gutterBottom>
+        Recent Orders
+      </Typography>
+      
+      {ordersLoading ? (
+        <Box display="flex" justifyContent="center" p={4}>
+          <CircularProgress />
+          <Typography variant="body2" style={{ marginLeft: 16 }}>
+            Loading your orders...
+          </Typography>
+        </Box>
+      ) : recentOrders.length === 0 ? (
+        <Box textAlign="center" py={4}>
+          <History fontSize="large" color="action" />
+          <Typography variant="body1" style={{ marginTop: 16 }}>
+            You haven't placed any orders yet.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            style={{ marginTop: 16 }}
+            onClick={() => history.push('/')}
+          >
+            Browse Books
+          </Button>
+        </Box>
+      ) : (
+        <>
+          <Grid container spacing={3}>
+            {recentOrders.map((order) => (
+              <Grid item xs={12} md={6} key={order.billId}>
+                <Card className={classes.orderCard}>
+                  <Grid container>
+                    <Grid item xs={4}>
+                      <CardMedia
+                        className={classes.orderImage}
+                        image={
+                          order.billItems[0]?.item?.url || 
+                          '/images/book-placeholder.png'
+                        }
+                        title={order.billItems[0]?.item?.name}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={8}>
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography variant="subtitle1">
+                            Order #{order.customer?.invoiceId || order.billId}
+                          </Typography>
+                          <Chip 
+                            label={order.customer?.paymentType || 'COD'} 
+                            size="small"
+                            color="primary"
+                          />
+                        </Box>
+                        
+                        <Typography variant="body2" color="textSecondary">
+                          {new Date(order.billDate).toLocaleDateString()}
+                        </Typography>
+                        
+                        <Box mt={1} mb={1}>
+                          <Typography variant="body2">
+                            {order.billItems[0]?.item?.name || 'Book Title'}
+                          </Typography>
+                          {order.billItems.length > 1 && (
+                            <Typography variant="caption" color="textSecondary">
+                              + {order.billItems.length - 1} other item(s)
+                            </Typography>
+                          )}
+                        </Box>
+                        
+                        <Box display="flex" alignItems="center">
+                          <LocalShipping fontSize="small" style={{ marginRight: 8 }} />
+                          <Typography variant="body2">
+                            {deliveryAddress.city || 'N/A'}
+                          </Typography>
+                        </Box>
+                        
+                        <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="h6">
+                            LKR{order.totalamount.toFixed(2)}
+                          </Typography>
+                          <Button 
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            onClick={() => history.push(`/orders/${order.billId}`)}
+                          >
+                            View Details
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Grid>
+                  </Grid>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          
+          <Box mt={4} display="flex" justifyContent="center">
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<History />}
+              onClick={() => history.push('/orders')}
+            >
+              View Full Order History
+            </Button>
+          </Box>
+        </>
+      )}
+    </Box>
+  </Paper>
+</Grid>
       </Grid>
 
       {/* Success/Error Messages */}
@@ -636,8 +781,9 @@ const Account = ({ setUserAccount }) => {
           </Typography>
         </Box>
       </Snackbar>
+      <PasswordForm open={changePasswordOpen} onClose={closeChangePassword} mode="change" />
     </Container>
   );
 };
 
-export default Account; 
+export default Account;

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { CssBaseline } from "@material-ui/core";
-import { commerce } from "./lib/commerce";
 import Products from "./components/Products/Products";
 import Navbar from "./components/Navbar/Navbar";
 import Cart from "./components/Cart/Cart";
@@ -18,6 +17,7 @@ import "./style.css";
 import Fiction from "./components/Fiction/Fiction";
 import Biography from "./components/Bio/Biography";
 import apiService from "./lib/apiService";
+import {checkAuth} from "./lib/authGuard";
 
 // Dummy cart data
 const dummyCart = {
@@ -41,6 +41,10 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [userId, setUserId] = useState(null);
   const [customer, setCustomer] = useState(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const fetchProducts = async () => {
     try {

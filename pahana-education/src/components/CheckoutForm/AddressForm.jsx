@@ -22,7 +22,6 @@ import {
 import { useForm, FormProvider } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
-import { commerce } from '../../lib/commerce';
 import FormInput from './CustomTextField';
 
 const AddressForm = ({ cart, test, customer }) => {
@@ -288,64 +287,9 @@ const AddressForm = ({ cart, test, customer }) => {
             <FormInput required name="city" label="City" />
             <FormInput required name="zip" label="Zip / Postal code" />
             
-            {/* Shipping Options */}
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel style={{ fontWeight: '600' }}>Shipping Country</InputLabel>
-                <Select 
-                  value={shippingCountry} 
-                  fullWidth 
-                  onChange={(e) => setShippingCountry(e.target.value)}
-                  style={{ borderRadius: '12px' }}
-                >
-                  {Object.entries(shippingCountries).map(([code, name]) => ({ id: code, label: name })).map((item) => (
-                    <MenuItem key={item.id} value={item.id}>
-                      {item.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
             
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel style={{ fontWeight: '600' }}>Shipping Subdivision</InputLabel>
-                <Select 
-                  value={shippingSubdivision} 
-                  fullWidth 
-                  onChange={(e) => setShippingSubdivision(e.target.value)}
-                  style={{ borderRadius: '12px' }}
-                >
-                  {shippingSubdivisions[shippingCountry] ? 
-                    Object.entries(shippingSubdivisions[shippingCountry]).map(([code, name]) => ({ id: code, label: name })).map((item) => (
-                      <MenuItem key={item.id} value={item.id}>
-                        {item.label}
-                      </MenuItem>
-                    ))
-                    :
-                    <MenuItem value="">No states available</MenuItem>
-                  }
-                </Select>
-              </FormControl>
-            </Grid>
             
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel style={{ fontWeight: '600' }}>Shipping Options</InputLabel>
-                <Select 
-                  value={shippingOption} 
-                  fullWidth 
-                  onChange={(e) => setShippingOption(e.target.value)}
-                  style={{ borderRadius: '12px' }}
-                >
-                  {shippingOptions.map((sO) => ({ id: sO.id, label: `${sO.description} - (${sO.price.formatted})` })).map((item) => (
-                    <MenuItem key={item.id} value={item.id}>
-                      {item.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+           
           </Grid>
           
           <Box mt={4} display="flex" justifyContent="space-between">

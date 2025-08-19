@@ -16,12 +16,14 @@ import logo from "../../assets/circles.png";
 import useStyles from "./styles";
 import Login from "../Login/Login";
 import Register from "../Register/Register";
+import PasswordForm from "../Account/PasswordForm";
 
 const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
   const classes = useStyles();
   const location = useLocation();
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -58,6 +60,10 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
     setRegisterOpen(false);
   };
 
+  const handleResetPasswordClose = () => {
+    setResetPasswordOpen(false);
+  };
+
   const handleSwitchToRegister = () => {
     setLoginOpen(false);
     setRegisterOpen(true);
@@ -65,6 +71,16 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
 
   const handleSwitchToLogin = () => {
     setRegisterOpen(false);
+    setLoginOpen(true);
+  };
+
+  const handleSwitchToReset = () => {
+    setLoginOpen(false);
+    setResetPasswordOpen(true);
+  };
+
+  const handleSwitchToLoginFromReset = () => {
+    setResetPasswordOpen(false);
     setLoginOpen(true);
   };
 
@@ -287,6 +303,7 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
         onClose={handleLoginClose}
         onLogin={handleLogin}
         onSwitchToRegister={handleSwitchToRegister}
+        onSwitchToReset={handleSwitchToReset}
       />
 
       {/* Register Dialog */}
@@ -295,6 +312,14 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
         onClose={handleRegisterClose}
         onLogin={handleLogin}
         onSwitchToLogin={handleSwitchToLogin}
+      />
+
+      {/* Reset Password Dialog */}
+      <PasswordForm
+        open={resetPasswordOpen}
+        onClose={handleResetPasswordClose}
+        onSwitchToLogin={handleSwitchToLoginFromReset}
+        mode="reset"
       />
     </div>
   );
