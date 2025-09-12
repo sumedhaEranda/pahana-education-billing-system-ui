@@ -2,7 +2,7 @@
 
 class ApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8085/api';
+    this.baseURL = 'https://pahanaeducationapp-latest-9.onrender.com/api';
   }
 
   async getProducts() {
@@ -489,8 +489,67 @@ class ApiService {
   
     return response.json();
   }
+   
+
+
+  async getCategories() {
+    const token = sessionStorage.getItem('jwtToken');  // Use tokenService to get decrypted token
+    console.log("🔑 Token for categories:", token ? "Present" : "Missing");
+    
+    const response = await fetch(`${this.baseURL}/items/category`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("📡 Categories API response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Categories API error:", errorText);
+      throw new Error(`Failed to fetch categories: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("📂 Categories API response data:", data);
+    return data;
+  }
+
+  // ✅ Get products by category
+  async getProductsByCategory(categoryName) {
+    const token = sessionStorage.getItem('jwtToken');  // Use tokenService to get decrypted token
+    console.log("🔑 Token for category products:", token ? "Present" : "Missing");
+    
+    const response = await fetch( `${this.baseURL}/items/category/${encodeURIComponent(categoryName)}`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("📡 Category products API response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Category products API error:", errorText);
+      throw new Error(`Failed to fetch products by category: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("📦 Category products API response data:", data);
+    return data;
+  }
+  
   
 }
+
+
+
 
 const apiService = new ApiService();
 export default apiService; 

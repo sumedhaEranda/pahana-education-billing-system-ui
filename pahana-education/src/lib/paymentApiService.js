@@ -1,5 +1,5 @@
 // Using env var directly for base URL
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8085/api';
+const API_BASE_URL = 'https://pahanaeducationapp-latest-9.onrender.com/api';
 
 class PaymentApiService {
   // Create a new bill/order

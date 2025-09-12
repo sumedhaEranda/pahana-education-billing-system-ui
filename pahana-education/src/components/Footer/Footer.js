@@ -42,7 +42,6 @@ const Footer = () => {
             </Box>
             <Typography variant="body2" style={{ lineHeight: 1.8, opacity: 0.9 }}>
               Your premier destination for discovering and purchasing books online. 
-              Explore our curated collection of fiction, biography, manga, and more. 
               Start your literary journey with us today.
             </Typography>
           </Grid>
@@ -93,20 +92,7 @@ const Footer = () => {
             </Box>
           </Grid>
 
-          {/* Contact Info */}
-          <Grid item xs={12} md={3}>
-            <Typography variant="h6" gutterBottom style={{ fontWeight: 700, marginBottom: "20px" }}>
-              Contact Us
-            </Typography>
-            <Box display="flex" flexDirection="column" gap={2}>
-              <Box display="flex" alignItems="center">
-                <Email style={{ marginRight: "8px", opacity: 0.8 }} />
-                <Typography variant="body2" style={{ opacity: 0.8 }}>
-                  chapachandi23@gmail.com
-                </Typography>
-              </Box>
-            </Box>
-          </Grid>
+        
 
           {/* Social Links */}
           <Grid item xs={12} md={3}>

@@ -16,6 +16,7 @@ import loadingImg from "./assets/loader.gif";
 import "./style.css";
 import Fiction from "./components/Fiction/Fiction";
 import Biography from "./components/Bio/Biography";
+import CategoryPage from "./components/CategoryPage/CategoryPage";
 import apiService from "./lib/apiService";
 import {checkAuth} from "./lib/authGuard";
 
@@ -32,18 +33,32 @@ const dummyCart = {
 const App = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [products, setProducts] = useState([]);
-  const [mangaProducts, setMangaProducts] = useState([]);
-  const [fictionProducts, setFictionProducts] = useState([]);
-  const [bioProducts, setBioProducts] = useState([]);
-  const [featureProducts, setFeatureProducts] = useState([]);
+  // const [mangaProducts, setMangaProducts] = useState([]);
+  // const [fictionProducts, setFictionProducts] = useState([]);
+  // const [bioProducts, setBioProducts] = useState([]);
   const [cart, setCart] = useState(dummyCart);
   const [order, setOrder] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [userId, setUserId] = useState(null);
   const [customer, setCustomer] = useState(null);
+  const [categories, setCategories] = useState([]);
+const [categoryProducts, setCategoryProducts] = useState({});
 
   useEffect(() => {
     checkAuth();
+    const loadCategories = async () => {
+      try {
+        // ✅ Get category list
+        const cats = await apiService.getCategories();
+        setCategories(cats);
+        console.log("📂 Categories:", cats);
+       
+      } catch (error) {
+        console.error("Failed to load categories/products", error);
+      }
+    };
+  
+    loadCategories();
   }, []);
 
   const fetchProducts = async () => {
@@ -55,25 +70,6 @@ const App = () => {
     }
   };
 
-  const fetchMangaProducts = async (allProducts) => {
-    const mangaData = allProducts.filter(product => product.category?.slug === "manga");
-    setMangaProducts(mangaData);
-  };
-
-  const fetchFeatureProducts = async (allProducts) => {
-    const featureData = allProducts.filter(product => product.category?.slug === "featured");
-    setFeatureProducts(featureData);
-  };
-
-  const fetchFictionProducts = async (allProducts) => {
-    const fictionData = allProducts.filter(product => product.category?.slug === "fiction");
-    setFictionProducts(fictionData);
-  };
-
-  const fetchBioProducts = async (allProducts) => {
-    const bioData = allProducts.filter(product => product.category?.slug === "biography");
-    setBioProducts(bioData);
-  };
 
   const fetchCart = async () => {
     try {
@@ -143,23 +139,40 @@ const App = () => {
     }
   };
 
-  const handleAddToCart = async (productId, quantity) => {
+  const handleAddToCart = async (productId, quantity, cartId = null, cartData = null) => {
+    console.log('🛒 handleAddToCart called in App.js:');
+    console.log('🆔 Product ID:', productId);
+    console.log('📦 Quantity:', quantity);
+    console.log('🆔 Cart ID (from CategoryPage):', cartId);
+    console.log('📦 Cart Data (from CategoryPage):', cartData);
+    
     const product = products.find(p => p.id === productId);
-    if (!product) return;
+    if (!product) {
+      console.log('❌ Product not found with ID:', productId);
+      return;
+    }
+    
+    console.log('📖 Product found:', product.name);
+    console.log('📊 Product inventory:', product.inventory);
 
-    if (product.inventory < quantity) return; // Prevent adding more than available
+    if (product.inventory < quantity) {
+      console.log('❌ Not enough inventory. Required:', quantity, 'Available:', product.inventory);
+      return; // Prevent adding more than available
+    }
 
     try {
+      console.log('🔄 Starting cart operation...');
       let cartId = cart.id ? cart.id.replace('cart_', '') : null;
       if (!cartId) {
-        // Optionally, fetch or create a cart here
-        // Or show an error message
+        console.log('⚠️ No cart ID available, cannot add to cart');
         return;
       }
       
       if (cartId) {
-        // Add item to backend cart
-        const itemData = {
+        console.log('🌐 Adding to cart via API, cart ID:', cartId);
+        
+        // Use cartData from CategoryPage if available, otherwise create it
+        const itemData = cartData || {
           itemId: parseInt(productId.replace('prod_', '')) || 1, // Extract number from "prod_1" -> 1
           itemName: product.name,
           quantity: quantity,
@@ -168,13 +181,15 @@ const App = () => {
           description: (product.description || '').substring(0, 255) // Truncate description to 255 characters
         };
 
+        console.log('📦 Item data being sent:', itemData);
         const response = await apiService.addCartItem(cartId, itemData);
         
+        console.log('✅ API call successful, refreshing cart...');
         // Refresh cart from backend
         await fetchCart();
         
         // Show success message
-        console.log('Item added to cart successfully:', response);
+        console.log('🛒 Item added to cart successfully:', response);
       } else {
         // Fallback to local cart if no cart ID
         const existingItem = cart.line_items.find(item => item.product_id === productId);
@@ -427,16 +442,10 @@ const App = () => {
       try {
         const data = await apiService.getProducts();
         setProducts(data);
-        fetchFeatureProducts(data);
-        fetchMangaProducts(data);
-        fetchFictionProducts(data);
-        fetchBioProducts(data);
+        
       } catch (error) {
         setProducts([]);
-        setFeatureProducts([]);
-        setMangaProducts([]);
-        setFictionProducts([]);
-        setBioProducts([]);
+        
       }
     };
 
@@ -477,7 +486,7 @@ const App = () => {
                 <Route exact path="/">
                   <Products
                     products={products}
-                    featureProducts={featureProducts}
+                    featureProducts={products}
                     onAddToCart={handleAddToCart}
                     handleUpdateCartQty
                   />
@@ -499,10 +508,16 @@ const App = () => {
                     customer={customer}
                   />
                 </Route>
+                
                 <Route path="/product-view/:id" exact>
                   <ProductView />
                 </Route>
-                <Route path="/manga" exact>
+
+                <Route path="/category/:categoryName" exact>
+                  <CategoryPage onAddToCart={handleAddToCart} />
+                </Route>
+
+                {/* <Route path="/manga" exact>
                   <Manga
                     mangaProducts={mangaProducts}
                     onAddToCart={handleAddToCart}
@@ -522,7 +537,7 @@ const App = () => {
                     onAddToCart={handleAddToCart}
                     handleUpdateCartQty
                   />
-                </Route>
+                </Route> */}
                 <Route path="/account" exact>
                   <Account setUserAccount={setUserAccount} />
                 </Route>
