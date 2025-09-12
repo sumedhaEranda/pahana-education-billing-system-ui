@@ -1,6 +1,6 @@
 import React from 'react';
 import { Container, Typography, Button, Grid, Box, TextField, Paper, Checkbox, FormControlLabel } from '@material-ui/core';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { ShoppingCart } from '@material-ui/icons';
 
 import CartItem from './CartItem/CartItem';
@@ -8,6 +8,7 @@ import useStyles from './styles';
 
 const Cart = ({ cart, onUpdateCartQty, onRemoveFromCart, onEmptyCart }) => {
   const classes = useStyles();
+  const history = useHistory();
   const [coupon, setCoupon] = React.useState("");
   const [selectedItems, setSelectedItems] = React.useState([]);
 
@@ -140,7 +141,7 @@ const Cart = ({ cart, onUpdateCartQty, onRemoveFromCart, onEmptyCart }) => {
             onClick={() => {
               // Store selected items in localStorage for checkout to access
               localStorage.setItem('selectedCartItems', JSON.stringify(selectedItems));
-              window.location.href = '/checkout';
+              history.push('/checkout');
             }}
           >
             PROCEED TO CHECKOUT

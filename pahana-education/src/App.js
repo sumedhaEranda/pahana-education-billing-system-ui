@@ -8,7 +8,7 @@ import ProductView from "./components/ProductView/ProductView";
 import Manga from "./components/Manga/Manga";
 import Footer from "./components/Footer/Footer";
 import Account from "./components/Account/Account";
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route, useHistory } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "mdbreact/dist/css/mdb.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -30,7 +30,8 @@ const dummyCart = {
   currency: { code: "USD", symbol: "$" }
 };
 
-const App = () => {
+const AppContent = () => {
+  const history = useHistory();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [products, setProducts] = useState([]);
   // const [mangaProducts, setMangaProducts] = useState([]);
@@ -400,8 +401,8 @@ const [categoryProducts, setCategoryProducts] = useState({});
   const handleCartClick = async () => {
     // Load cart items when cart icon is clicked
     await fetchCart();
-    // Navigate to cart page
-    window.location.href = '/cart';
+    // Navigate to cart page using React Router
+    history.push('/cart');
   };
 
   const handleCaptureCheckout = async (checkoutTokenId, newOrder) => {
@@ -473,77 +474,75 @@ const [categoryProducts, setCategoryProducts] = useState({});
     <div>
       {products.length > 0 ? (
         <>
-          <Router>
-            <div style={{ display: "flex" }}>
-              <CssBaseline />
-              <Navbar
-                totalItems={cart.total_items}
-                handleDrawerToggle={handleDrawerToggle}
-                setUserAccount={setUserAccount}
-                onCartClick={handleCartClick}
-              />
-              <Switch>
-                <Route exact path="/">
-                  <Products
-                    products={products}
-                    featureProducts={products}
-                    onAddToCart={handleAddToCart}
-                    handleUpdateCartQty
-                  />
-                </Route>
-                <Route exact path="/cart">
-                  <Cart
-                    cart={cart}
-                    onUpdateCartQty={handleUpdateCartQty}
-                    onRemoveFromCart={handleRemoveFromCart}
-                    onEmptyCart={handleEmptyCart}
-                  />
-                </Route>
-                <Route path="/checkout" exact>
-                  <Checkout
-                    cart={cart}
-                    order={order}
-                    onCaptureCheckout={handleCaptureCheckout}
-                    error={errorMessage}
-                    customer={customer}
-                  />
-                </Route>
-                
-                <Route path="/product-view/:id" exact>
-                  <ProductView />
-                </Route>
+          <div style={{ display: "flex" }}>
+            <CssBaseline />
+            <Navbar
+              totalItems={cart.total_items}
+              handleDrawerToggle={handleDrawerToggle}
+              setUserAccount={setUserAccount}
+              onCartClick={handleCartClick}
+            />
+            <Switch>
+              <Route exact path="/">
+                <Products
+                  products={products}
+                  featureProducts={products}
+                  onAddToCart={handleAddToCart}
+                  handleUpdateCartQty
+                />
+              </Route>
+              <Route exact path="/cart">
+                <Cart
+                  cart={cart}
+                  onUpdateCartQty={handleUpdateCartQty}
+                  onRemoveFromCart={handleRemoveFromCart}
+                  onEmptyCart={handleEmptyCart}
+                />
+              </Route>
+              <Route path="/checkout" exact>
+                <Checkout
+                  cart={cart}
+                  order={order}
+                  onCaptureCheckout={handleCaptureCheckout}
+                  error={errorMessage}
+                  customer={customer}
+                />
+              </Route>
+              
+              <Route path="/product-view/:id" exact>
+                <ProductView />
+              </Route>
 
-                <Route path="/category/:categoryName" exact>
-                  <CategoryPage onAddToCart={handleAddToCart} />
-                </Route>
+              <Route path="/category/:categoryName" exact>
+                <CategoryPage onAddToCart={handleAddToCart} />
+              </Route>
 
-                {/* <Route path="/manga" exact>
-                  <Manga
-                    mangaProducts={mangaProducts}
-                    onAddToCart={handleAddToCart}
-                    handleUpdateCartQty
-                  />
-                </Route>
-                <Route path="/fiction" exact>
-                  <Fiction
-                    fictionProducts={fictionProducts}
-                    onAddToCart={handleAddToCart}
-                    handleUpdateCartQty
-                  />
-                </Route>
-                <Route path="/biography" exact>
-                  <Biography
-                    bioProducts={bioProducts}
-                    onAddToCart={handleAddToCart}
-                    handleUpdateCartQty
-                  />
-                </Route> */}
-                <Route path="/account" exact>
-                  <Account setUserAccount={setUserAccount} />
-                </Route>
-              </Switch>
-            </div>
-          </Router>
+              {/* <Route path="/manga" exact>
+                <Manga
+                  mangaProducts={mangaProducts}
+                  onAddToCart={handleAddToCart}
+                  handleUpdateCartQty
+                />
+              </Route>
+              <Route path="/fiction" exact>
+                <Fiction
+                  fictionProducts={fictionProducts}
+                  onAddToCart={handleAddToCart}
+                  handleUpdateCartQty
+                />
+              </Route>
+              <Route path="/biography" exact>
+                <Biography
+                  bioProducts={bioProducts}
+                  onAddToCart={handleAddToCart}
+                  handleUpdateCartQty
+                />
+              </Route> */}
+              <Route path="/account" exact>
+                <Account setUserAccount={setUserAccount} />
+              </Route>
+            </Switch>
+          </div>
           <Footer />
         </>
       ) : (
@@ -552,6 +551,14 @@ const [categoryProducts, setCategoryProducts] = useState({});
         </div>
       )}
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 };
 

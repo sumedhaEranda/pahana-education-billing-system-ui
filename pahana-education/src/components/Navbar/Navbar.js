@@ -11,7 +11,7 @@ import {
   Button,
 } from "@material-ui/core";
 import { ShoppingCart, Person, ExitToApp } from "@material-ui/icons";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useHistory } from "react-router-dom";
 import logo from "../../assets/circles.png";
 import useStyles from "./styles";
 import Login from "../Login/Login";
@@ -21,6 +21,7 @@ import PasswordForm from "../Account/PasswordForm";
 const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
   const classes = useStyles();
   const location = useLocation();
+  const history = useHistory();
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -160,7 +161,7 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
     localStorage.removeItem('userAvatar');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userJoinDate');
-    window.location.href = '/';
+    history.push('/');
   };
 
   return (
@@ -264,7 +265,7 @@ const Navbar = ({ totalItems, setUserAccount, onCartClick }) => {
                     onClick={() => { 
                       handleUserMenuClose(); 
                       if (!isOnAccountPage) {
-                        window.location.href = '/account'; 
+                        history.push('/account'); 
                       }
                     }} 
                     className={classes.menuItem}
