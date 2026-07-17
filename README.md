@@ -136,9 +136,6 @@ This project is developed for educational purposes.
 
 **Sumeada**
 
-- GitHub: https://github.com/your-username
-- LinkedIn: https://linkedin.com/in/your-profile
-
 ---
 
 ⭐ If you found this project useful, please consider giving it a star!
