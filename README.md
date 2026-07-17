@@ -62,7 +62,7 @@ A modern **React.js** frontend application for the **Pahana Education Billing Sy
 ### Clone the repository
 
 ```bash
-git clone https://github.com/sumedhaEranda/pahana-education-billing-system-frontend.git
+git clone https://github.com/sumedhaEranda/pahana-education-billing-system-ui.git
 ```
 
 ### Navigate to the project
